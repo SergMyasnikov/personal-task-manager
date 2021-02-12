@@ -1,0 +1,116 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+
+use App\Models\Category;
+use App\Models\Subcategory;
+use App\Models\Task;
+use App\Http\Requests\TaskRequest;
+
+
+class TaskController extends Controller
+{
+    public function index($categoryId = 0)
+    {
+        $categories = Category::orderBy('name')->where('user_id', '=', Auth::id())->get();
+        $where = [['user_id', '=', Auth::id()]];
+        if ($categoryId != 0) {
+            $where []= ['category_id', '=', $categoryId];
+        }
+        $models = Task::where($where)->orderBy('priority', 'desc')
+                ->paginate(env('PAGINATION_PAGE_SIZE_FOR_TASKS', 20));
+
+        return view('tasks.index', [
+            'models' => $models,
+            'categories' => $categories
+        ]);
+    }
+
+    public function create(Request $request)
+    {
+        $category_id = intval($request->input('category_id', 0));
+        $category = Category::find($category_id);
+        if (!is_null($category) && ($category->user_id == Auth::id())) {
+            return view('tasks.create')->with('category', $category);
+        }
+        else {
+            abort(404);
+        }
+    }
+    
+    public function store(TaskRequest $request) 
+    {
+        $subcategoryId = $request->input('subcategory_id');
+        $subcategory = Subcategory::find($subcategoryId);
+        if (is_null($subcategory) || ($subcategory->user_id != Auth::id())) {
+            abort(404);
+        }
+        $model = new Task();
+        $model->user_id = Auth::id();
+        $model->subcategory_id = $subcategoryId;
+        $model->description = $request->input('description');
+        $model->priority = $request->input('priority');
+        $model->comment = $request->input('comment') ?? '';
+        $model->save();
+        return redirect()->route('task-index')
+                ->with('success', 'Задача добавлена');
+    }
+    
+    public function show($id) 
+    {
+        $model = Task::find($id);
+        if (!is_null($model) && ($model->user_id == Auth::id())) {
+            return view('tasks.show')->with('model', $model);
+        }
+        else {
+            abort(404);
+        }
+    }
+
+    public function destroy($id) 
+    {
+        $model = Task::find($id);
+        if (!is_null($model) && ($model->user_id == Auth::id())) {
+            $model->delete();
+            return redirect()->route('task-index')
+                    ->with('success', 'Задача удалена');
+        }
+        else {
+            abort(404);
+        }
+    }
+
+    public function edit($id)
+    {
+        $model = Task::find($id);
+        if (is_null($model) || ($model->user_id != Auth::id())) {
+            abort(404);
+        }
+        return view('tasks.edit')->with('model',$model);
+    }
+
+    public function update(TaskRequest $request, $id) 
+    {
+        $subcategoryId = $request->input('subcategory_id');
+        $subcategory = Subcategory::find($subcategoryId);
+        if (is_null($subcategory) || ($subcategory->user_id != Auth::id())) {
+            abort(404);
+        }
+        $model = Task::find($id);
+        if (!is_null($model) && ($model->user_id == Auth::id())) {
+            $model->subcategory_id = $subcategoryId;
+            $model->description = $request->input('description');
+            $model->priority = $request->input('priority');
+            $model->comment = $request->input('comment') ?? '';
+            $model->save();
+            return redirect()->route('task-show', $model->id)
+                    ->with('success', 'Изменения сохранены');
+        }
+        else {
+            abort(404);
+        }
+    }
+}

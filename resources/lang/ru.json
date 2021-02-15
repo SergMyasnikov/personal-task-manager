@@ -1,0 +1,15 @@
+{
+    "Whoops! Something went wrong.": "Обнаружена ошибка.",
+    "Email": "Адрес электронной почты",
+    "Password": "Пароль",
+    "Remember me": "Запомнить пароль",
+    "Forgot your password?": "Забыли пароль?",
+    "Login": "Войти",
+    "Forgot your password? No problem. Just let us know your email address and we will email you a password reset link that will allow you to choose a new one." : "Введите адрес электронной почты, связанный с вашей учетной записью. На указанный адрес будет направлена ссылка для сброса существующего пароля и задания нового",
+    "Email Password Reset Link": "Отправить ссылку для сброса пароля",
+    "Confirm Password": "Повтор пароля",
+    "Reset Password": "Сбросить пароль",
+    "Name" : "Имя пользователя",
+    "Already registered?": "Я уже зарегистрирован",
+    "Register": "Зарегистрироваться"
+}

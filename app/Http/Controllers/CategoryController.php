@@ -4,10 +4,12 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 use App\Models\Category;
 use App\Models\Subcategory;
 use App\Http\Requests\CategoryRequest;
+use App\Services\CategoryService;
 
 class CategoryController extends Controller
 {
@@ -24,31 +26,18 @@ class CategoryController extends Controller
     
     public function store(CategoryRequest $request) 
     {
-        $model = new Category();
-
-        $categoryName = $request->input('name'); 
+        $categoryName = $request->input('name');
+        $target_percentage = $request->input('target_percentage');
         $userId = Auth::id();
         
-        $isCategoryExists = $model->where('user_id', '=', $userId)
-                ->where('name', '=', $categoryName)->exists();
-        
-        if ($isCategoryExists) {
-            return redirect()->route('category-create')->withErrors([
-                'Категория с указанным именем уже существует']);            
+        try {
+            CategoryService::createCategory($userId, $categoryName, $target_percentage);        
         }
-        
-        $model->user_id = $userId;
-        $model->name = $categoryName;
-        $model->target_percentage = $request->input('target_percentage');
-        $model->save();
-        
-        $subcategory = new Subcategory();
-        $subcategory->name = '-';
-        $subcategory->category_id = $model->id;
-        $subcategory->user_id = $userId;
-        $subcategory->is_default = 1;
-        $subcategory->save();
-        
+        catch (\App\Exceptions\CategoryNameAlreadyExistsException $e) {
+            return redirect()->route('category-create')->withErrors(
+                ['Категория с указанным именем уже существует']);            
+        }
+
         return redirect()->route('category-index')
                 ->with('success', 'Категория добавлена');
     }
@@ -66,28 +55,31 @@ class CategoryController extends Controller
     
     public function destroy($id) 
     {
-        $model = Category::find($id);
-        if (!is_null($model) && ($model->user_id == Auth::id())) {
-            if (count($model->timeBlocks) > 0) {
-                return redirect()->route('category-show', $id)->withErrors([
-                    'Удаление категории невозможно, так как существуют зависимые от нее записи журнала']);
-            }
-            if (count($model->subcategories) > 1) {
-                return redirect()->route('category-show', $id)->withErrors([
-                    'Удаление категории невозможно, так как существуют зависимые от нее подкатегории']);
-            }
-            if (count($model->subcategories[0]->tasks) > 0) {
-                return redirect()->route('category-show', $id)->withErrors([
-                    'Удаление категории невозможно, так как существуют зависимые от нее задачи']);
-            }
-            $model->subcategories[0]->delete();
-            $model->delete();
-            return redirect()->route('category-index')
-                    ->with('success', 'Категория удалена');
-        }
-        else {
+        $model = Category::findOrFail($id);
+        if ($model->user_id != Auth::id()) {
             abort(404);
         }
+        
+        $error = '';
+        try {
+            CategoryService::deleteCategory($model);
+        }
+        catch (\App\Exceptions\RemovingCategoryHasChildSubcategoriesException $e) {
+            $error = 'Удаление категории невозможно, так как существуют зависимые от нее подкатегории';
+        }
+        catch (\App\Exceptions\RemovingCategoryHasChildTasksException $e) {
+            $error = 'Удаление категории невозможно, так как существуют зависимые от нее задачи';
+        }
+        catch (\App\Exceptions\RemovingCategoryHasChildTimeBlocksException $e) {
+            $error = 'Удаление категории невозможно, так как существуют зависимые от нее записи журнала';
+        }
+        
+        if ($error != '') {
+            return redirect()->route('category-show', $id)->withErrors([$error]);
+        }
+        
+        return redirect()->route('category-index')
+                ->with('success', 'Категория удалена');
     }
     
     public function edit($id)

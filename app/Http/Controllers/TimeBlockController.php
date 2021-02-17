@@ -14,7 +14,7 @@ class TimeBlockController extends Controller
     
     public function index()
     {
-        $models = TimeBlock::orderBy('block_date', 'desc')->where('user_id', '=', Auth::id())
+        $models = TimeBlock::forUser(Auth::id())->orderBy('block_date', 'desc')
                 ->paginate(env('PAGINATION_PAGE_SIZE_FOR_TIME_BLOCKS', 20));
         return view('time-blocks.index')->with('models', $models);
     }
@@ -22,18 +22,14 @@ class TimeBlockController extends Controller
     
     public function create()
     {
-        $categories = Category::orderBy('name')->where('user_id', '=', Auth::id())->get();
+        $categories = Category::forUser(Auth::id())->orderBy('name')->get();
         return view('time-blocks.create')->with('categories', $categories);
     }
     
     public function store(TimeBlockRequest $request) 
     {
         $categoryId = $request->input('category_id');
-        $category = Category::find($categoryId);
-        if (is_null($category) || ($category->user_id != Auth::id())) {
-            abort(404);
-        }
-        
+        $category = Category::forUser(Auth::id())->findOrFail($categoryId);
         $model = new TimeBlock();
         $model->user_id = Auth::id();
         $model->category_id = $categoryId;
@@ -47,36 +43,23 @@ class TimeBlockController extends Controller
     
     public function show($id) 
     {
-        $model = TimeBlock::find($id);
-        if (!is_null($model) && ($model->user_id == Auth::id())) {
-            return view('time-blocks.show')->with('model', $model);
-        }
-        else {
-            abort(404);
-        }
+        $model = TimeBlock::forUser(Auth::id())->findOrFail($id);
+        return view('time-blocks.show')->with('model', $model);
     }
 
     public function destroy($id) 
     {
-        $model = TimeBlock::find($id);
-        if (!is_null($model) && ($model->user_id == Auth::id())) {
-            $model->delete();
-            return redirect()->route('time-block-index')
-                    ->with('success', 'Задача удалена');
-        }
-        else {
-            abort(404);
-        }
+        $model = TimeBlock::forUser(Auth::id())->findOrFail($id);
+        $model->delete();
+        return redirect()->route('time-block-index')
+                ->with('success', 'Задача удалена');
     }
     
     
     public function edit($id)
     {
-        $categories = Category::orderBy('name')->where('user_id', '=', Auth::id())->get();
-        $model = TimeBlock::find($id);
-        if (is_null($model) || ($model->user_id != Auth::id())) {
-            abort(404);
-        }
+        $categories = Category::forUser(Auth::id())->orderBy('name')->get();
+        $model = TimeBlock::forUser(Auth::id())->findOrFail($id);
         return view('time-blocks.edit')->with([
             'model' => $model,
             'categories' => $categories
@@ -86,22 +69,14 @@ class TimeBlockController extends Controller
     public function update(TimeBlockRequest $request, $id) 
     {
         $categoryId = $request->input('category_id');
-        $category = Category::find($categoryId);
-        if (is_null($category) || ($category->user_id != Auth::id())) {
-            abort(404);
-        }
-        $model = TimeBlock::find($id);
-        if (!is_null($model) && ($model->user_id == Auth::id())) {
-            $model->category_id = $categoryId;
-            $model->description = $request->input('description');
-            $model->block_date = $request->input('block_date');
-            $model->block_length = $request->input('block_length');
-            $model->save();
-            return redirect()->route('time-block-show', $model->id)
-                    ->with('success', 'Изменения сохранены');
-        }
-        else {
-            abort(404);
-        }
+        $category = Category::forUser(Auth::id())->findOrFail($categoryId);
+        $model = TimeBlock::forUser(Auth::id())->findOrFail($id);
+        $model->category_id = $category->id;
+        $model->description = $request->input('description');
+        $model->block_date = $request->input('block_date');
+        $model->block_length = $request->input('block_length');
+        $model->save();
+        return redirect()->route('time-block-show', $model->id)
+                ->with('success', 'Изменения сохранены');
     }
 }

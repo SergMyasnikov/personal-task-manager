@@ -16,5 +16,10 @@ class TimeBlock extends Model
     public function user() {
 	return $this->belongsTo(User::class);
     }
+
+    public function scopeForUser($query, $userId)
+    {
+        return $query->where('user_id', $userId);
+    }
     
 }

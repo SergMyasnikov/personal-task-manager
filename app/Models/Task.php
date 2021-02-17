@@ -16,5 +16,10 @@ class Task extends Model
     public function subcategory() {
 	return $this->belongsTo(Subcategory::class);
     }
+
+    public function scopeForUser($query, $userId)
+    {
+        return $query->where('user_id', $userId);
+    }
     
 }

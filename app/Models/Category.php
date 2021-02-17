@@ -21,5 +21,8 @@ class Category extends Model
 	return $this->hasMany(Subcategory::class);
     }
     
-    
+    public function scopeForUser($query, $userId)
+    {
+        return $query->where('user_id', $userId);
+    }
 }

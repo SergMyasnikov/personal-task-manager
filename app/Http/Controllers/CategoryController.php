@@ -15,7 +15,7 @@ class CategoryController extends Controller
 {
     public function index()
     {
-        $models = Category::orderBy('name')->where('user_id', '=', Auth::id())->get();
+        $models = Category::forUser(Auth::id())->orderBy('name')->get();
         return view('categories.index')->with('models', $models);
     }
     
@@ -44,21 +44,13 @@ class CategoryController extends Controller
     
     public function show($id) 
     {
-        $model = Category::find($id);
-        if (!is_null($model) && ($model->user_id == Auth::id())) {
-            return view('categories.show')->with('model', $model);
-        }
-        else {
-            abort(404);
-        }
+        $model = Category::forUser(Auth::id())->findOrFail($id);
+        return view('categories.show')->with('model', $model);
     }
     
     public function destroy($id) 
     {
-        $model = Category::findOrFail($id);
-        if ($model->user_id != Auth::id()) {
-            abort(404);
-        }
+        $model = Category::forUser(Auth::id())->findOrFail($id);
         
         $error = '';
         try {
@@ -84,28 +76,18 @@ class CategoryController extends Controller
     
     public function edit($id)
     {
-        $model = Category::find($id);
-        if (!is_null($model) && ($model->user_id == Auth::id())) {
-            return view('categories.edit')->with('model', $model);
-        }
-        else {
-            abort(404);
-        }
+        $model = Category::forUser(Auth::id())->findOrFail($id);
+        return view('categories.edit')->with('model', $model);
     }
 
     public function update(CategoryRequest $request, $id) 
     {
-        $model = Category::find($id);
-        if (!is_null($model) && ($model->user_id == Auth::id())) {
-            $model->name = $request->input('name');
-            $model->target_percentage = $request->input('target_percentage');
-            $model->save();
-            return redirect()->route('category-show', $model->id)
-                    ->with('success', 'Изменения сохранены');
-        }
-        else {
-            abort(404);
-        }
+        $model = Category::forUser(Auth::id())->findOrFail($id);
+        $model->name = $request->input('name');
+        $model->target_percentage = $request->input('target_percentage');
+        $model->save();
+        return redirect()->route('category-show', $model->id)
+                ->with('success', 'Изменения сохранены');
     }
     
 }

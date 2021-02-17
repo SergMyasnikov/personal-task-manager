@@ -21,5 +21,9 @@ class Subcategory extends Model
 	return $this->hasMany(Task::class);
     }
     
+    public function scopeForUser($query, $userId)
+    {
+        return $query->where('user_id', $userId);
+    }
     
 }

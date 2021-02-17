@@ -13,14 +13,11 @@ use App\Http\Requests\TaskRequest;
 
 class TaskController extends Controller
 {
-    public function index($categoryId = 0)
+    public function index()
     {
-        $categories = Category::orderBy('name')->where('user_id', '=', Auth::id())->get();
-        $where = [['user_id', '=', Auth::id()]];
-        if ($categoryId != 0) {
-            $where []= ['category_id', '=', $categoryId];
-        }
-        $models = Task::where($where)->orderBy('priority', 'desc')
+        $categories = Category::forUser(Auth::id())->orderBy('name')->get();
+        
+        $models = Task::forUser(Auth::id())->orderBy('priority', 'desc')
                 ->paginate(env('PAGINATION_PAGE_SIZE_FOR_TASKS', 20));
 
         return view('tasks.index', [
@@ -32,22 +29,14 @@ class TaskController extends Controller
     public function create(Request $request)
     {
         $category_id = intval($request->input('category_id', 0));
-        $category = Category::find($category_id);
-        if (!is_null($category) && ($category->user_id == Auth::id())) {
-            return view('tasks.create')->with('category', $category);
-        }
-        else {
-            abort(404);
-        }
+        $category = Category::forUser(Auth::id())->findOrFail($category_id);
+        return view('tasks.create')->with('category', $category);
     }
     
     public function store(TaskRequest $request) 
     {
         $subcategoryId = $request->input('subcategory_id');
-        $subcategory = Subcategory::find($subcategoryId);
-        if (is_null($subcategory) || ($subcategory->user_id != Auth::id())) {
-            abort(404);
-        }
+        $subcategory = Subcategory::forUser(Auth::id())->findOrFail($subcategoryId);
         $model = new Task();
         $model->user_id = Auth::id();
         $model->subcategory_id = $subcategoryId;
@@ -61,56 +50,35 @@ class TaskController extends Controller
     
     public function show($id) 
     {
-        $model = Task::find($id);
-        if (!is_null($model) && ($model->user_id == Auth::id())) {
-            return view('tasks.show')->with('model', $model);
-        }
-        else {
-            abort(404);
-        }
+        $model = Task::forUser(Auth::id())->findOrFail($id);
+        return view('tasks.show')->with('model', $model);
     }
 
     public function destroy($id) 
     {
-        $model = Task::find($id);
-        if (!is_null($model) && ($model->user_id == Auth::id())) {
-            $model->delete();
-            return redirect()->route('task-index')
-                    ->with('success', 'Задача удалена');
-        }
-        else {
-            abort(404);
-        }
+        $model = Task::forUser(Auth::id())->findOrFail($id);
+        $model->delete();
+        return redirect()->route('task-index')
+                ->with('success', 'Задача удалена');
     }
 
     public function edit($id)
     {
-        $model = Task::find($id);
-        if (is_null($model) || ($model->user_id != Auth::id())) {
-            abort(404);
-        }
+        $model = Task::forUser(Auth::id())->findOrFail($id);
         return view('tasks.edit')->with('model',$model);
     }
 
     public function update(TaskRequest $request, $id) 
     {
         $subcategoryId = $request->input('subcategory_id');
-        $subcategory = Subcategory::find($subcategoryId);
-        if (is_null($subcategory) || ($subcategory->user_id != Auth::id())) {
-            abort(404);
-        }
-        $model = Task::find($id);
-        if (!is_null($model) && ($model->user_id == Auth::id())) {
-            $model->subcategory_id = $subcategoryId;
-            $model->description = $request->input('description');
-            $model->priority = $request->input('priority');
-            $model->comment = $request->input('comment') ?? '';
-            $model->save();
-            return redirect()->route('task-show', $model->id)
-                    ->with('success', 'Изменения сохранены');
-        }
-        else {
-            abort(404);
-        }
+        $subcategory = Subcategory::forUser(Auth::id())->findOrFail($subcategoryId);
+        $model = Task::forUser(Auth::id())->findOrFail($id);
+        $model->subcategory_id = $subcategory->id;
+        $model->description = $request->input('description');
+        $model->priority = $request->input('priority');
+        $model->comment = $request->input('comment') ?? '';
+        $model->save();
+        return redirect()->route('task-show', $model->id)
+                ->with('success', 'Изменения сохранены');
     }
 }

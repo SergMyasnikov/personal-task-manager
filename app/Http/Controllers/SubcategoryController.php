@@ -7,6 +7,9 @@ use Illuminate\Support\Facades\Auth;
 
 use App\Models\Category;
 use App\Models\Subcategory;
+
+use App\Services\SubcategoryService;
+
 use App\Http\Requests\SubcategoryRequest;
 
 
@@ -24,10 +27,10 @@ class SubcategoryController extends Controller
         $category = Category::forUser(Auth::id())->findOrFail($categoryId);
         $model = new Subcategory();
         $model->user_id = Auth::id();
-        $model->category_id = $categoryId;
+        $model->category_id = $category->id;
         $model->name = $request->input('name');
         $model->save();
-        return redirect()->route('category-show', $categoryId)
+        return redirect()->route('category-show', $category->id)
                 ->with('success', 'Подкатегория добавлена');
     }
     
@@ -40,15 +43,19 @@ class SubcategoryController extends Controller
     public function destroy($id) 
     {
         $model = Subcategory::forUser(Auth::id())->findOrFail($id);
-        if ($model->is_default == 1) {
-            return redirect()->route('subcategory-show', $id)->withErrors([
-                'Удаление главной подкатегории не допускается']);
+        $error = '';
+        try {
+            SubcategoryService::deleteSubcategory($model);
         }
-        if ((count($model->tasks) > 0)) {
-            return redirect()->route('subcategory-show', $id)->withErrors([
-                'Удаление подкатегории невозможно, так как существуют зависимые от нее объекты']);
+        catch (\App\Exceptions\DirectlyRemovingDefaultSubcategoryException $e) {
+            $error = 'Удаление главной подкатегории не допускается';
         }
-        $model->delete();
+        catch (\App\Exceptions\RemovingSubcategoryHasChildTasksException $e) {
+            $error = 'Удаление подкатегории невозможно, так как существуют зависимые от нее объекты';
+        }
+        if ($error != '') {
+            return redirect()->route('subcategory-show', $id)->withErrors([$error]);
+        }
         return redirect()->route('category-show', $model->category_id)
                 ->with('success', 'Подкатегория удалена');
     }

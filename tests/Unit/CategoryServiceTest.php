@@ -18,11 +18,7 @@ use App\Services\CategoryService;
 class CategoryServiceTest extends TestCase
 {
     use RefreshDatabase;
-    /**
-     * A basic unit test example.
-     *
-     * @return void
-     */
+
     public function testCreateCategory()
     {
         $user = User::factory()->create();

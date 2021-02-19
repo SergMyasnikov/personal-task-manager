@@ -7,6 +7,9 @@ use Illuminate\Support\Facades\Auth;
 
 use App\Models\Category;
 use App\Models\TimeBlock;
+
+use App\Services\CategoryService;
+
 use App\Http\Requests\TimeBlockRequest;
 
 class TimeBlockController extends Controller
@@ -16,7 +19,12 @@ class TimeBlockController extends Controller
     {
         $models = TimeBlock::forUser(Auth::id())->orderBy('block_date', 'desc')
                 ->paginate(env('PAGINATION_PAGE_SIZE_FOR_TIME_BLOCKS', 20));
-        return view('time-blocks.index')->with('models', $models);
+        
+        $isCategoryExists = CategoryService::checkCategoryExists(Auth::id());
+        
+        return view('time-blocks.index')->with([
+            'models' => $models,
+            'isCategoryExists' => $isCategoryExists]);
     }
 
     

@@ -101,4 +101,38 @@ class CategoryServiceTest extends TestCase
                 \App\Exceptions\RemovingCategoryHasChildTasksException::class);
         CategoryService::deleteCategory($categories[0]);
     }
+    
+    public function testCheckCategorySum() {
+        $user = User::factory()->create();
+        CategoryService::createCategory($user->id, 'Foo', 20);
+        CategoryService::createCategory($user->id, 'Foo2', 80);
+        $this->assertTrue(CategoryService::checkCategorySum($user->id));
+    }
+    
+    public function testCheckCategorySumLessThan100() {
+        $user = User::factory()->create();
+        CategoryService::createCategory($user->id, 'Foo', 20);
+        CategoryService::createCategory($user->id, 'Foo2', 70);
+        $this->assertFalse(CategoryService::checkCategorySum($user->id));
+    }
+
+    public function testCheckCategorySumGreaterThan100() {
+        $user = User::factory()->create();
+        CategoryService::createCategory($user->id, 'Foo', 20);
+        CategoryService::createCategory($user->id, 'Foo2', 40);
+        CategoryService::createCategory($user->id, 'Foo3', 50);
+        $this->assertFalse(CategoryService::checkCategorySum($user->id));
+    }
+
+    public function testCheckCategoryExistsTrue() {
+        $user = User::factory()->create();
+        CategoryService::createCategory($user->id, 'Foo', 20);
+        $this->assertTrue(CategoryService::checkCategoryExists($user->id));
+    }
+    
+    public function testCheckCategoryExistsFalse() {
+        $user = User::factory()->create();
+        $this->assertFalse(CategoryService::checkCategoryExists($user->id));
+    }
+    
 }

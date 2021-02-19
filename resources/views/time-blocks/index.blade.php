@@ -27,5 +27,9 @@
 Нет записей
 <?php endif; ?>
 <hr>
+<?php if ($isCategoryExists) : ?>
 <a href="{{ route('time-block-create') }}" class="btn btn-success">Добавить запись</a>
+<?php else : ?>
+Для добавления записей нужно предварительно добавить категории
+<?php endif; ?>
 @endsection
